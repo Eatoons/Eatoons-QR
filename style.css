@@ -2,9 +2,9 @@
 body,
 html {
   height: 100%;
+  width: 100%;
   font-family: "Segoe UI", sans-serif;
   background: linear-gradient(to bottom, #ffffff, #fff2e2);
-  /*background: url('./assets/background.jpg') no-repeat center center fixed;*/
   margin: 0;
   padding: 0;
   color: #000;
@@ -76,8 +76,6 @@ html {
   display: flex;
   flex-direction: column;
   width: 100%;
-  border-color: #f78940;
-  border-width: 1px;
   gap: 1rem;
 }
 
@@ -100,28 +98,73 @@ html {
   transform: scale(1.02);
 }
 
-/* Responsive tweaks */
-@media screen and (max-width: 480px) {
-  .brand-name {
-    font-size: 1.5rem;
-  }
-
-  .tagline {
-    font-size: 0.95rem;
-  }
-
-  .links a {
-    padding: 0.9rem;
-    font-size: 1rem;
-  }
-}
-
+/* 3D Canvas for Tom */
 #model-canvas {
   position: absolute;
   bottom: 0.5rem;
-  left: 30%;
+  left: 50%;
   transform: translateX(-50%);
   width: 200px;
   height: 200px;
   z-index: 1;
+  opacity: 0;
+  animation: fadeInModel 0.8s ease forwards;
+}
+
+/* 3D Canvas for Burger (top left) */
+#burger-canvas {
+  position: absolute;
+  top: 0.8rem;
+  left: 0.8rem;
+  width: 100px;
+  height: 100px;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeInModel 0.8s ease forwards;
+}
+
+/* Fade animation */
+@keyframes fadeInModel {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive tweaks for mobile */
+@media screen and (max-width: 480px) {
+  .main-wrapper {
+    padding: 1.5rem 0.8rem;
+  }
+
+  .profile-logo {
+    width: 160px;
+    height: 160px;
+  }
+
+  .brand-name {
+    font-size: 1.4rem;
+  }
+
+  .tagline {
+    font-size: 1rem;
+    margin: 0.8rem 0 1.2rem;
+  }
+
+  .links a {
+    padding: 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  #model-canvas {
+    width: 140px;
+    height: 140px;
+    bottom: 0.25rem;
+  }
+
+  #burger-canvas {
+    width: 80px;
+    height: 80px;
+    top: 0.5rem;
+    left: 0.5rem;
+  }
 }
