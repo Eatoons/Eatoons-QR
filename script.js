@@ -2,95 +2,117 @@ import * as THREE from "https://esm.sh/three@0.155.0";
 import { GLTFLoader } from "https://esm.sh/three@0.155.0/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "https://esm.sh/three@0.155.0/examples/jsm/controls/OrbitControls.js";
 
-// ========== Setup for TOM ==========
-const tomCanvas = document.getElementById("model-canvas");
-const tomScene = new THREE.Scene();
-const tomCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-tomCamera.position.set(0, 1.5, 6);
-const tomRenderer = new THREE.WebGLRenderer({
-  canvas: tomCanvas,
+// Grab canvas from DOM
+const canvas = document.getElementById("model-canvas");
+
+// Scene setup
+const scene = new THREE.Scene();
+scene.background = null;
+
+// Camera setup
+const camera = new THREE.PerspectiveCamera(50, 200 / 250, 0.1, 1000);
+camera.position.set(0, 1.5, 6);
+
+// Renderer setup
+const renderer = new THREE.WebGLRenderer({
+  canvas,
   alpha: true,
   antialias: true,
 });
-tomRenderer.setSize(tomCanvas.clientWidth, tomCanvas.clientHeight);
-tomRenderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(200, 250);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-const tomControls = new OrbitControls(tomCamera, tomRenderer.domElement);
-tomControls.enableZoom = false;
-tomControls.enablePan = false;
-tomControls.enableRotate = true;
+// Ambient light
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(ambientLight);
 
-const tomAmbient = new THREE.AmbientLight(0xffffff, 1.2);
-tomScene.add(tomAmbient);
-const tomDirLight = new THREE.DirectionalLight(0xffffff, 1);
-tomDirLight.position.set(3, 10, 5);
-tomScene.add(tomDirLight);
+// Directional light
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(3, 10, 5);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 50;
+scene.add(dirLight);
 
-// Load Tom model
-const tomLoader = new GLTFLoader();
-tomLoader.load("./assets/tom.glb", (gltf) => {
-  const model = gltf.scene;
-  model.scale.set(0.3, 0.3, 0.3);
-  model.position.y = -2;
-  model.traverse((node) => node.isMesh && (node.castShadow = true));
-  tomScene.add(model);
+// Controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.enableRotate = true;
 
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(5, 5),
-    new THREE.ShadowMaterial({ opacity: 0.3 })
+// GLTF loader
+const loader = new GLTFLoader();
+
+// Load TOM model
+loader.load(
+  "./assets/tom.glb",
+  (gltf) => {
+    const tom = gltf.scene;
+    tom.scale.set(0.2, 0.2, 0.2);
+    tom.position.y = -2;
+
+    tom.traverse((node) => {
+      if (node.isMesh) node.castShadow = true;
+    });
+
+    scene.add(tom);
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(5, 5),
+      new THREE.ShadowMaterial({ opacity: 0.3 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -2.6;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    animate(); // Start animation after main model is loaded
+  },
+  undefined,
+  (error) => console.error("TOM load error:", error)
+);
+
+// Convert screen coords to world position
+function getWorldPositionFromScreen(x, y, z = 0) {
+  const vec = new THREE.Vector3(
+    (x / renderer.domElement.clientWidth) * 2 - 1,
+    -(y / renderer.domElement.clientHeight) * 2 + 1,
+    z
   );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -2.6;
-  ground.receiveShadow = true;
-  tomScene.add(ground);
-
-  animateTom();
-});
-
-function animateTom() {
-  requestAnimationFrame(animateTom);
-  tomControls.update();
-  tomRenderer.render(tomScene, tomCamera);
+  vec.unproject(camera);
+  const dir = vec.sub(camera.position).normalize();
+  const distance = (z - camera.position.z) / dir.z;
+  return camera.position.clone().add(dir.multiplyScalar(distance));
 }
 
-// ========== Setup for BURGER ==========
-const burgerCanvas = document.getElementById("burger-canvas");
-const burgerScene = new THREE.Scene();
-const burgerCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-burgerCamera.position.set(0, 1, 5);
-const burgerRenderer = new THREE.WebGLRenderer({
-  canvas: burgerCanvas,
-  alpha: true,
-  antialias: true,
-});
-burgerRenderer.setSize(burgerCanvas.clientWidth, burgerCanvas.clientHeight);
-burgerRenderer.setPixelRatio(window.devicePixelRatio);
+// Load BURGER model
+loader.load(
+  "./assets/burger_new.glb",
+  (gltf) => {
+    const burger = gltf.scene;
+    burger.scale.set(0.2, 0.2, 0.2);
+    burger.traverse((node) => {
+      if (node.isMesh) node.castShadow = true;
+    });
 
-const burgerControls = new OrbitControls(
-  burgerCamera,
-  burgerRenderer.domElement
+    // Position in top-left corner of the canvas
+    const margin = 20; // pixels from top-left
+    const position3D = getWorldPositionFromScreen(margin, margin, 0);
+    burger.position.copy(position3D);
+
+    scene.add(burger);
+  },
+  undefined,
+  (error) => console.error("BURGER load error:", error)
 );
-burgerControls.enableZoom = false;
-burgerControls.enablePan = false;
-burgerControls.enableRotate = true;
 
-const burgerLight = new THREE.AmbientLight(0xffffff, 1.2);
-burgerScene.add(burgerLight);
-
-// Load Burger model
-const burgerLoader = new GLTFLoader();
-burgerLoader.load("./assets/burger.glb", (gltf) => {
-  const burger = gltf.scene;
-  burger.scale.set(0.9, 0.9, 0.9);
-  burger.position.y = -1.5;
-  burger.traverse((node) => node.isMesh && (node.castShadow = true));
-  burgerScene.add(burger);
-
-  animateBurger();
-});
-
-function animateBurger() {
-  requestAnimationFrame(animateBurger);
-  burgerControls.update();
-  burgerRenderer.render(burgerScene, burgerCamera);
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
 }
