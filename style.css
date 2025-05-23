@@ -92,6 +92,11 @@ html {
   transition: all 0.3s ease;
 }
 
+.links a:visited {
+  color: #333;
+  background: #fff;
+}
+
 .links a:hover {
   background-color: #f78940;
   color: white;
