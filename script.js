@@ -65,7 +65,7 @@ let jerryBaseY = -2;
 let direction = 1; // 1: right, -1: left
 
 // === Load Tom ===
-loader.load("/assets/tom.glb", (gltf) => {
+loader.load("./assets/tom.glb", (gltf) => {
   tom = gltf.scene;
   tom.scale.set(2, 2, 2);
   tom.position.set(-11, -2, 1);
@@ -78,7 +78,7 @@ loader.load("/assets/tom.glb", (gltf) => {
 });
 
 // === Load Jerry ===
-loader.load("/assets/jerry.glb", (gltf) => {
+loader.load("./assets/jerry.glb", (gltf) => {
   jerry = gltf.scene;
   jerry.scale.set(0.25, 0.25, 0.25);
   jerry.position.set(-11, jerryBaseY, 1);
