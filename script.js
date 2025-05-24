@@ -2,117 +2,105 @@ import * as THREE from "https://esm.sh/three@0.155.0";
 import { GLTFLoader } from "https://esm.sh/three@0.155.0/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "https://esm.sh/three@0.155.0/examples/jsm/controls/OrbitControls.js";
 
-// Grab canvas from DOM
+// === Setup ===
 const canvas = document.getElementById("model-canvas");
-
-// Scene setup
 const scene = new THREE.Scene();
-scene.background = null;
-
-// Camera setup
 const camera = new THREE.PerspectiveCamera(50, 200 / 250, 0.1, 1000);
-camera.position.set(0, 1.5, 6);
-
-// Renderer setup
+camera.position.set(0, 3, 10);
 const renderer = new THREE.WebGLRenderer({
   canvas,
   alpha: true,
   antialias: true,
 });
-renderer.setSize(200, 250);
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Ambient light
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-scene.add(ambientLight);
+// === Lights ===
+const light = new THREE.AmbientLight(0xffffff, 1.5);
+scene.add(light);
 
-// Directional light
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(3, 10, 5);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 1024;
-dirLight.shadow.mapSize.height = 1024;
-dirLight.shadow.camera.near = 0.5;
-dirLight.shadow.camera.far = 50;
-scene.add(dirLight);
-
-// Controls
+// === Controls (Optional for debug) ===
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableZoom = false;
 controls.enablePan = false;
-controls.enableRotate = true;
+controls.enableRotate = false;
 
-// GLTF loader
+// === Loaders ===
 const loader = new GLTFLoader();
+let tom, jerry;
+let tomMixer, jerryMixer;
+let clock = new THREE.Clock();
 
-// Load TOM model
-loader.load(
-  "./assets/tom.glb",
-  (gltf) => {
-    const tom = gltf.scene;
-    tom.scale.set(0.2, 0.2, 0.2);
-    tom.position.y = -2;
+// === Load Tom ===
+loader.load("/assets/tom.glb", (gltf) => {
+  tom = gltf.scene;
+  tom.scale.set(1, 1, 1);
+  scene.add(tom);
 
-    tom.traverse((node) => {
-      if (node.isMesh) node.castShadow = true;
-    });
+  tomMixer = new THREE.AnimationMixer(tom);
+  gltf.animations.forEach((clip) => {
+    tomMixer.clipAction(clip).play();
+  });
 
-    scene.add(tom);
+  checkStart();
+});
 
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(5, 5),
-      new THREE.ShadowMaterial({ opacity: 0.3 })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -2.6;
-    ground.receiveShadow = true;
-    scene.add(ground);
+// === Load Jerry ===
+loader.load("/assets/jerry.glb", (gltf) => {
+  jerry = gltf.scene;
+  jerry.scale.set(0.8, 0.8, 0.8);
+  scene.add(jerry);
 
-    animate(); // Start animation after main model is loaded
-  },
-  undefined,
-  (error) => console.error("TOM load error:", error)
-);
+  jerryMixer = new THREE.AnimationMixer(jerry);
+  gltf.animations.forEach((clip) => {
+    jerryMixer.clipAction(clip).play();
+  });
 
-// Convert screen coords to world position
-function getWorldPositionFromScreen(x, y, z = 0) {
-  const vec = new THREE.Vector3(
-    (x / renderer.domElement.clientWidth) * 2 - 1,
-    -(y / renderer.domElement.clientHeight) * 2 + 1,
-    z
-  );
-  vec.unproject(camera);
-  const dir = vec.sub(camera.position).normalize();
-  const distance = (z - camera.position.z) / dir.z;
-  return camera.position.clone().add(dir.multiplyScalar(distance));
+  checkStart();
+});
+
+let started = false;
+function checkStart() {
+  if (tom && jerry && !started) {
+    started = true;
+    tom.position.set(0, 0, 0);
+    jerry.position.set(3, 0, 0);
+    animate();
+    moveJerryRandomly();
+  }
 }
 
-// Load BURGER model
-loader.load(
-  "./assets/burger_new.glb",
-  (gltf) => {
-    const burger = gltf.scene;
-    burger.scale.set(0.2, 0.2, 0.2);
-    burger.traverse((node) => {
-      if (node.isMesh) node.castShadow = true;
-    });
+// === Move Jerry Randomly ===
+function moveJerryRandomly() {
+  setInterval(() => {
+    const newX = (Math.random() - 0.5) * 10;
+    const newZ = (Math.random() - 0.5) * 10;
+    jerry.lookAt(newX, 0, newZ);
 
-    // Position in top-left corner of the canvas
-    const margin = 20; // pixels from top-left
-    const position3D = getWorldPositionFromScreen(margin, margin, 0);
-    burger.position.copy(position3D);
+    jerry.userData.target = new THREE.Vector3(newX, 0, newZ);
+  }, 3000); // Change position every 3 seconds
+}
 
-    scene.add(burger);
-  },
-  undefined,
-  (error) => console.error("BURGER load error:", error)
-);
-
-// Animation loop
+// === Animate Loop ===
 function animate() {
   requestAnimationFrame(animate);
-  controls.update();
+  const delta = clock.getDelta();
+
+  tomMixer?.update(delta);
+  jerryMixer?.update(delta);
+
+  if (jerry?.userData?.target) {
+    jerry.position.lerp(jerry.userData.target, 0.02);
+  }
+
+  if (tom && jerry) {
+    // Make Tom chase Jerry
+    tom.lookAt(jerry.position);
+    tom.position.lerp(
+      jerry.position.clone().add(new THREE.Vector3(-0.5, 0, -0.5)),
+      0.015
+    );
+  }
+
   renderer.render(scene, camera);
 }
