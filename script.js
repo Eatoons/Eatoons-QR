@@ -5,8 +5,15 @@ import { OrbitControls } from "https://esm.sh/three@0.155.0/examples/jsm/control
 // === Setup ===
 const canvas = document.getElementById("model-canvas");
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(50, 200 / 250, 0.1, 1000);
-camera.position.set(0, 3, 10);
+
+const camera = new THREE.PerspectiveCamera(
+  50,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.set(0, 2, 8);
+
 const renderer = new THREE.WebGLRenderer({
   canvas,
   alpha: true,
@@ -14,16 +21,32 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
 
 // === Lights ===
-const light = new THREE.AmbientLight(0xffffff, 1.5);
-scene.add(light);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(ambientLight);
 
-// === Controls (Optional for debug) ===
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(5, 10, 5);
+dirLight.castShadow = true;
+scene.add(dirLight);
+
+// === Floor ===
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 30),
+  new THREE.ShadowMaterial({ opacity: 0.2 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -2.1;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// === Controls (disabled) ===
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableZoom = false;
 controls.enablePan = false;
-controls.enableRotate = false;
+controls.enableRotate = true;
 
 // === Loaders ===
 const loader = new GLTFLoader();
@@ -31,31 +54,36 @@ let tom, jerry;
 let tomMixer, jerryMixer;
 let clock = new THREE.Clock();
 
+let speed = 0.03;
+let tomOffset = 1.5;
+
+let jerryBounceHeight = 0.3;
+let jerryBaseY = -2;
+let direction = 1; // 1: right, -1: left
+
 // === Load Tom ===
 loader.load("/assets/tom.glb", (gltf) => {
   tom = gltf.scene;
-  tom.scale.set(1, 1, 1);
+  tom.scale.set(0.5, 0.5, 0.5);
+  tom.position.set(-4, -2, 0);
+  tom.traverse((n) => n.isMesh && (n.castShadow = true));
   scene.add(tom);
 
   tomMixer = new THREE.AnimationMixer(tom);
-  gltf.animations.forEach((clip) => {
-    tomMixer.clipAction(clip).play();
-  });
-
+  gltf.animations.forEach((clip) => tomMixer.clipAction(clip).play());
   checkStart();
 });
 
 // === Load Jerry ===
 loader.load("/assets/jerry.glb", (gltf) => {
   jerry = gltf.scene;
-  jerry.scale.set(0.8, 0.8, 0.8);
+  jerry.scale.set(0.05, 0.05, 0.05);
+  jerry.position.set(-6, jerryBaseY, 0);
+  jerry.traverse((n) => n.isMesh && (n.castShadow = true));
   scene.add(jerry);
 
   jerryMixer = new THREE.AnimationMixer(jerry);
-  gltf.animations.forEach((clip) => {
-    jerryMixer.clipAction(clip).play();
-  });
-
+  gltf.animations.forEach((clip) => jerryMixer.clipAction(clip).play());
   checkStart();
 });
 
@@ -63,42 +91,48 @@ let started = false;
 function checkStart() {
   if (tom && jerry && !started) {
     started = true;
-    tom.position.set(0, 0, 0);
-    jerry.position.set(3, 0, 0);
     animate();
-    moveJerryRandomly();
   }
 }
 
-// === Move Jerry Randomly ===
-function moveJerryRandomly() {
-  setInterval(() => {
-    const newX = (Math.random() - 0.5) * 10;
-    const newZ = (Math.random() - 0.5) * 10;
-    jerry.lookAt(newX, 0, newZ);
-
-    jerry.userData.target = new THREE.Vector3(newX, 0, newZ);
-  }, 3000); // Change position every 3 seconds
-}
-
-// === Animate Loop ===
+// === Animate ===
 function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
+  const time = clock.elapsedTime;
 
   tomMixer?.update(delta);
   jerryMixer?.update(delta);
 
-  if (jerry?.userData?.target) {
-    jerry.position.lerp(jerry.userData.target, 0.02);
-  }
+  if (jerry && tom) {
+    // Reverse direction when hitting bounds
+    if (jerry.position.x > 6 && direction === 1) {
+      direction = -1;
+      tom.rotation.y += Math.PI;
+      jerry.rotation.y += Math.PI;
+    } else if (jerry.position.x < -6 && direction === -1) {
+      direction = 1;
+      tom.rotation.y -= Math.PI;
+      jerry.rotation.y -= Math.PI;
+    }
 
-  if (tom && jerry) {
-    // Make Tom chase Jerry
+    // Speed multiplier logic
+    const currentSpeed = direction === -1 ? speed * 2.5 : speed;
+
+    // Jerry bouncing
+    jerry.position.x += currentSpeed * direction;
+    jerry.position.y = jerryBaseY + Math.sin(time * 10) * jerryBounceHeight;
+
+    // Tom follows with offset
+    const targetX = jerry.position.x - tomOffset * direction;
+    tom.position.x = THREE.MathUtils.lerp(tom.position.x, targetX, 0.05); // make Tom more reactive during fast run
+
+    // Look direction
     tom.lookAt(jerry.position);
-    tom.position.lerp(
-      jerry.position.clone().add(new THREE.Vector3(-0.5, 0, -0.5)),
-      0.015
+    jerry.lookAt(
+      jerry.position.x + direction,
+      jerry.position.y,
+      jerry.position.z
     );
   }
 
