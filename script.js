@@ -19,7 +19,10 @@ const renderer = new THREE.WebGLRenderer({
   alpha: true,
   antialias: true,
 });
-renderer.setSize(window.innerWidth, window.innerHeight);
+const canvasContainer = document.getElementById("model-canvas");
+renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+camera.updateProjectionMatrix();
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 
@@ -54,8 +57,8 @@ let tom, jerry;
 let tomMixer, jerryMixer;
 let clock = new THREE.Clock();
 
-let speed = 0.03;
-let tomOffset = 1.5;
+let speed = 0.06;
+let tomOffset = 3.5;
 
 let jerryBounceHeight = 0.3;
 let jerryBaseY = -2;
@@ -64,8 +67,8 @@ let direction = 1; // 1: right, -1: left
 // === Load Tom ===
 loader.load("/assets/tom.glb", (gltf) => {
   tom = gltf.scene;
-  tom.scale.set(0.5, 0.5, 0.5);
-  tom.position.set(-4, -2, 0);
+  tom.scale.set(2, 2, 2);
+  tom.position.set(-11, -2, 1);
   tom.traverse((n) => n.isMesh && (n.castShadow = true));
   scene.add(tom);
 
@@ -77,8 +80,8 @@ loader.load("/assets/tom.glb", (gltf) => {
 // === Load Jerry ===
 loader.load("/assets/jerry.glb", (gltf) => {
   jerry = gltf.scene;
-  jerry.scale.set(0.05, 0.05, 0.05);
-  jerry.position.set(-6, jerryBaseY, 0);
+  jerry.scale.set(0.25, 0.25, 0.25);
+  jerry.position.set(-11, jerryBaseY, 1);
   jerry.traverse((n) => n.isMesh && (n.castShadow = true));
   scene.add(jerry);
 
@@ -106,11 +109,11 @@ function animate() {
 
   if (jerry && tom) {
     // Reverse direction when hitting bounds
-    if (jerry.position.x > 6 && direction === 1) {
+    if (jerry.position.x > 11 && direction === 1) {
       direction = -1;
       tom.rotation.y += Math.PI;
       jerry.rotation.y += Math.PI;
-    } else if (jerry.position.x < -6 && direction === -1) {
+    } else if (jerry.position.x < -11 && direction === -1) {
       direction = 1;
       tom.rotation.y -= Math.PI;
       jerry.rotation.y -= Math.PI;
@@ -125,7 +128,7 @@ function animate() {
 
     // Tom follows with offset
     const targetX = jerry.position.x - tomOffset * direction;
-    tom.position.x = THREE.MathUtils.lerp(tom.position.x, targetX, 0.05); // make Tom more reactive during fast run
+    tom.position.x = THREE.MathUtils.lerp(tom.position.x, targetX, 0.08); // make Tom more reactive during fast run
 
     // Look direction
     tom.lookAt(jerry.position);
