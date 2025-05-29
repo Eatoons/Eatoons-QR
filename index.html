@@ -15,7 +15,6 @@
         dataLayer.push(arguments);
       }
       gtag("js", new Date());
-
       gtag("config", "G-JDLJQCWMBL");
     </script>
   </head>
@@ -48,27 +47,56 @@
           <img src="./assets/youtube.svg" alt="YouTube" />
         </a>
       </div>
+
       <div class="links-wrapper">
         <div class="links">
-          <a href="./assets/Eatoons Menu 24.05.2025.pdf" target="_blank"
-            >Menu</a
-          >
-          <a href="http://zoma.to/r/21856290" target="_blank">Zomato</a>
+          <a href="./assets/Eatoons Menu 24.05.2025.pdf" target="_blank">
+            <img src="./assets/menu.svg" alt="Menu Icon" class="icon" />
+            <span>Menu</span>
+          </a>
+          <a href="http://zoma.to/r/21856290" target="_blank">
+            <img src="./assets/zomato.svg" alt="Zomato Icon" class="icon" />
+            <span>Zomato</span>
+          </a>
           <a
             href="https://www.swiggy.com/city/coimbatore/eatoons-peelamedu-rest1078891"
             target="_blank"
-            >Swiggy</a
           >
-          <a href="https://g.co/kgs/DgtxLkD" target="_blank">Google Review</a>
+            <img src="./assets/swiggy.svg" alt="Swiggy Icon" class="icon" />
+            <span>Swiggy</span>
+          </a>
+          <a href="https://g.co/kgs/DgtxLkD" target="_blank">
+            <img src="./assets/google.svg" alt="Google Icon" class="icon" />
+            <span>Google Review</span>
+          </a>
         </div>
         <canvas id="model-canvas"></canvas>
       </div>
     </div>
+
     <script type="module" src="./script.js"></script>
+
+    <!-- GA4 Custom Click Tracking -->
     <script>
       document.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => {
-          const label = link.textContent.trim() || link.href;
+          let label = "";
+
+          // Text-based buttons like Menu, Zomato
+          if (link.textContent.trim()) {
+            label = link.textContent.trim();
+          }
+
+          // Image-based links like social icons
+          if (!label && link.querySelector("img")) {
+            label = link.querySelector("img").alt || link.href;
+          }
+
+          // Fallback to URL
+          if (!label) {
+            label = link.href;
+          }
+
           gtag("event", "click", {
             event_category: "navigation",
             event_label: label,
