@@ -109,7 +109,7 @@ function animate() {
 
   if (jerry && tom) {
     // Reverse direction when hitting bounds
-    if (jerry.position.x > 11 && direction === 1) {
+    if (jerry.position.x > 8 && direction === 1) {
       direction = -1;
       tom.rotation.y += Math.PI;
       jerry.rotation.y += Math.PI;
