@@ -7,7 +7,7 @@ body {
   padding: 0;
   overflow: auto;
   font-family: "Segoe UI", sans-serif;
-  background: linear-gradient(to bottom, #ffffff, #fff2e2);
+  background: linear-gradient(to bottom, #ffffff, #fefdfb);
   display: flex;
   justify-content: center;
   align-items: flex-start;
